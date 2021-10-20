@@ -1,8 +1,35 @@
+/*
+  This file is part of the NHB_AD7124 library.
+
+  MIT License
+
+  Copyright (C) 2021  Jaimy Juliano
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+*/
+
 #ifndef NHB_AD7124
 #define NHB_AD7124
 
 #include <SPI.h>
 #include "AD_Defs.h"
+#include "Thermocouple.h"
 
 
 #define AD7124_DEFAULT_TIMEOUT_MS  200 //milliseconds
@@ -294,20 +321,30 @@ class Ad7124 {
         //return the readings in voltage
         int readVolts(double *buf, uint8_t chCount); 
 
+        //Read thermocouple. Currently only Type K is supported.
+        //The channel must first be setup properly for reading thermocouples.
+        double readTC(uint8_t ch, double refTemp, TcTypes type = Type_K);
+
+        //Read a 4 wire full bridge sensor. Return value can be scaled with
+        //optional scaleFactor arg. Returns mV/V if scale factor is one (default)
+        double readFB(uint8_t ch, double vEx, double scaleFactor = 1.000);
+
+        //Read the on chip temp sensor. EXPERIMENTAL
+        double readIcTemp(uint8_t ch);
+
         //Enable bias voltage on given channel
         int setVBias(AD7124_VBiasPins vBiasPin, bool enabled); 
 
         //Set excitation current
-        //int setExCurrent(uint8_t ch, AD7124_ExCurrents); //NOT IMPLEMENTED
+        //int setExCurrent(uint8_t ch, AD7124_ExCurrents); //NOT IMPLEMENTED YET
 
         void setTimeout(uint32_t ms) {timeout = ms;}
-
         
         
         //Sets the ADC Control register
         int setAdcControl (AD7124_OperatingModes mode, AD7124_PowerModes power_mode, bool ref_en = true, AD7124_ClkSources clk_sel = AD7124_Clk_Internal); 
 
-        //Control the mode of operation for ADC (Not real clear on this, investigate)
+        //Control the mode of operation for ADC 
         int setMode (AD7124_OperatingModes mode); 
 
 
@@ -315,7 +352,7 @@ class Ad7124 {
         //Configure a channel
         int setChannel (uint8_t ch, uint8_t cfg, AD7124_InputSel ainp, AD7124_InputSel ainm, bool enable = false); 
 
-        //Enable/Disable channel  (Not real clear on this, investigate)
+        //Enable/Disable channel  
         int enableChannel (uint8_t ch, bool enable = true); 
 
         //Returns the setup number used by the channel
@@ -329,24 +366,28 @@ class Ad7124 {
         //Waits until a new conversion result is available.
         int waitEndOfConversion (uint32_t timeout_ms); 
 
-        //Returns the last sampling channel  (doesn't seem to work)
+        //Returns the last sampling channel
         int currentChannel(); 
         
         //Return the the status register contents
         int status();
 
-        //Returns the last sample *Maybe this should be made private but I think we need to access for continuous mode
+        //Returns the most recent sample in raw ADC counts with 
+        //status bits appended (data + status mode)
         int32_t getData();
 
         //Testing version to use when status bits are appended to data
         //int32_t getData2();
         
+        //Converts raw ADC counts to voltage. The conversion
+        //is dependent on the gain, ref voltage, and bipolar mode
         double toVolts (long value, int gain, double vref, bool bipolar);
 
         //Converts a raw reading from the on chip temp sensor to degrees C
         double tempSensorRawToDegC(long value); 
         
         Ad7124Setup setup[8];
+
 
     private:
                 
@@ -368,6 +409,7 @@ class Ad7124 {
 
        
         SPISettings spiSettings;
+        Thermocouple thermocouple;
                 
         bool crcEnabled = false;
         bool isReady = true; //Not really used now, may go away [8-26-21]

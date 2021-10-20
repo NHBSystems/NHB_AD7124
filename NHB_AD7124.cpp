@@ -1,3 +1,29 @@
+/*
+  This file is part of the NHB_AD7124 library.
+
+  MIT License
+
+  Copyright (C) 2021  Jaimy Juliano
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+*/
+
 #include "NHB_AD7124.h"
 
 
@@ -122,8 +148,38 @@ int Ad7124::begin(){
     pinMode(cs, OUTPUT);
     SPI.begin();
 
-    //return setAdcControl (AD7124_OpMode_Standby, AD7124_FullPower, false); // Wait, why is this here? [8-26-21]
-    return reset();     
+    return reset(); // Must be removed for testing below
+
+    // ******************* Preconfigured IC Temp Sensor code ************************
+    // Test if we can pre configure the IC temp sensor here. May put this in it's own
+    // method later. May also turn out to be entirely unnecessary
+    // Setup 7 will be reserved for temp sensor
+    //
+    // TESTED - This does seems to work, however there may be other pitfalls - 10-10-2021 
+    // UPDATE: I don't think I'm going to persue this anymore for right now, but it does
+    // work so I'll keep it here for a bit in case I change my mind - 10-11-2021
+
+
+    // ret = reset(); 
+    // if (ret < 0) {
+    //   return ret;
+    // }
+
+    // ret = setup[7].setConfig(AD7124_Ref_Internal, AD7124_Gain_1, true);
+    // if (ret < 0) {
+    //   return ret;
+    // } 
+
+    // ret = setup[7].setFilter(AD7124_Filter_SINC3, 80);  
+    // if (ret < 0) {
+    //   return ret;
+    // } 
+
+
+    // // Channel 15 reserved for temp sensor
+    // return setChannel(15, 7, AD7124_Input_TEMP, AD7124_Input_AVSS, true);
+
+    // *****************************************************************************
 }
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -203,7 +259,7 @@ int32_t Ad7124::readRaw(uint8_t ch) {
 // Multiple channels should be enabled before calling
 int Ad7124::readRaw(int32_t *buf, uint8_t chCount) {
   int ret;
-  int ch;
+  //int ch;
   int32_t data;
   
   ret = setMode(AD7124_OpMode_SingleConv);
@@ -221,7 +277,7 @@ int Ad7124::readRaw(int32_t *buf, uint8_t chCount) {
     
     data = getData();
     
-    ch = currentChannel(); //This works now, but using as the buffer index wouldnt work if we skipped a channel number. WHAT TO DO?
+    //ch = currentChannel(); //This works now, but using as the buffer index wouldnt work if we skipped a channel number. WHAT TO DO?
         
     buf[i] = data; // Keep using the loop index for now. I need to think about this some more. So far it has worked fine this way
     //buf[ch] = data; 
@@ -230,9 +286,7 @@ int Ad7124::readRaw(int32_t *buf, uint8_t chCount) {
       return AD7124_COMM_ERR;
     }    
   }
-
-  // Serial.println();
-
+  
   return 0;
 }
 
@@ -266,6 +320,18 @@ int Ad7124::readVolts(double *buf, uint8_t chCount){
   return 0;
 }
 
+//Read K Type thermocouple. The channel must first be setup properly
+//for reading thermocouples.
+double Ad7124::readTC(uint8_t ch, double refTemp, TcTypes type){  
+  return thermocouple.voltageToTempDegC(readVolts(ch),refTemp,type); 
+}
+
+//Read a 4 wire full bridge sensor. Return value can be scaled with
+//optional scaleFactor arg. Returns mV/V if scale factor is one (default)
+double Ad7124::readFB(uint8_t ch, double vEx, double scaleFactor){
+  return ((readVolts(ch) * 1000.0) / vEx) * scaleFactor;
+}
+
 // Sets the ADC Control register 
 int Ad7124::setAdcControl (AD7124_OperatingModes mode, AD7124_PowerModes power_mode, bool ref_en, AD7124_ClkSources clk_sel){
   
@@ -277,6 +343,12 @@ int Ad7124::setAdcControl (AD7124_OperatingModes mode, AD7124_PowerModes power_m
                             AD7124_ADC_CTRL_REG_DOUT_RDY_DEL;
 
   return writeRegister(Reg_Control);
+}
+
+// Read the on chip temp sensor. The channel must first be setup properly
+// for reading thermocouples. EXPERIMENTAL
+double Ad7124::readIcTemp(uint8_t ch){
+  return tempSensorRawToDegC(readRaw(ch));
 }
 
 // Control the mode of operation for ADC 
