@@ -34,11 +34,11 @@
 
 
 // Sets configuration reg values 
-int Ad7124Setup::setConfig (AD7124_RefSources ref, AD7124_GainSel pga, bool bipolar, AD7124_BurnoutCurrents burnout, double exRefV){
+int Ad7124Setup::setConfig (AD7124_RefSources ref, AD7124_GainSel gain, bool bipolar, AD7124_BurnoutCurrents burnout, double exRefV){
     
     //Store these away for easy access later (this is a bit redundant, should proabably just get values from reg struct when needed)
     setupValues.ref = ref;
-    setupValues.pga = pga;
+    setupValues.gain = gain;
     setupValues.bipolar = bipolar;
     setupValues.burnout;
 
@@ -50,7 +50,7 @@ int Ad7124Setup::setConfig (AD7124_RefSources ref, AD7124_GainSel pga, bool bipo
     uint8_t reg = setupNum + Reg_Config_0;    
 
     _driver->regs[reg].value = AD7124_CFG_REG_REF_SEL (ref) |
-                                    AD7124_CFG_REG_PGA (pga) |
+                                    AD7124_CFG_REG_PGA (gain) |
                                     (bipolar ? AD7124_CFG_REG_BIPOLAR : 0) |
                                     AD7124_CFG_REG_BURNOUT (burnout) |
                                     AD7124_CFG_REG_REF_BUFP | AD7124_CFG_REG_REF_BUFM |
@@ -123,7 +123,7 @@ bool Ad7124Setup::bipolar(){
 uint8_t Ad7124Setup::gain(){  
   //We can left shift 1 by the values of the AD7124_GainSel enum elements
   //to yeald the actual gain value (e.g.  1 << AD7124_Gain_128 = 128) 
-  return  1 << (uint8_t) setupValues.pga;
+  return  1 << (uint8_t) setupValues.gain;
 }
 
 
@@ -361,14 +361,14 @@ int Ad7124::setMode (AD7124_OperatingModes mode){
 } 
 
 // Configure channel 
-int Ad7124::setChannel (uint8_t ch, uint8_t cfg, AD7124_InputSel ainp, AD7124_InputSel ainm, bool enable){
-  if ( (ch < 16) && (cfg < 8)) {
+int Ad7124::setChannel (uint8_t ch, uint8_t setup, AD7124_InputSel aiPos, AD7124_InputSel aiNeg, bool enable){
+  if ( (ch < 16) && (setup < 8)) {
     
     ch += Reg_Channel_0;
     
-    regs[ch].value =  AD7124_CH_MAP_REG_SETUP (cfg) |
-                      AD7124_CH_MAP_REG_AINP (ainp) |
-                      AD7124_CH_MAP_REG_AINM (ainm) |
+    regs[ch].value =  AD7124_CH_MAP_REG_SETUP (setup) |
+                      AD7124_CH_MAP_REG_AINP (aiPos) |
+                      AD7124_CH_MAP_REG_AINM (aiNeg) |
                       (enable ? AD7124_CH_MAP_REG_CH_ENABLE : 0);
 
     return writeRegister((AD7124_regIDs) ch);

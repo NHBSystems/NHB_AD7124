@@ -233,7 +233,7 @@ enum AD7124_regIDs {
 struct Ad7124_SetupVals{
     //Config
     AD7124_RefSources ref = AD7124_Ref_ExtRef1;
-    AD7124_GainSel pga = AD7124_Gain_1;
+    AD7124_GainSel gain = AD7124_Gain_1;
     bool bipolar = true;
     AD7124_BurnoutCurrents burnout = AD7124_Burnout_Off;
 
@@ -263,7 +263,7 @@ class Ad7124Setup{
 
               
         //Sets configuration reg values
-        int setConfig (AD7124_RefSources ref, AD7124_GainSel pga, bool bipolar, AD7124_BurnoutCurrents burnout = AD7124_Burnout_Off, double exRefV = 2.50); 
+        int setConfig (AD7124_RefSources ref, AD7124_GainSel gain, bool bipolar, AD7124_BurnoutCurrents burnout = AD7124_Burnout_Off, double exRefV = 2.50); 
 
         //Sets the filter type and output word rate for a setup
         int setFilter (AD7124_Filters filter, uint16_t fs, AD7124_PostFilters postfilter = AD7124_PostFilter_NoPost, bool rej60 = false, bool single = false); 
@@ -350,7 +350,7 @@ class Ad7124 {
 
 
         //Configure a channel
-        int setChannel (uint8_t ch, uint8_t cfg, AD7124_InputSel ainp, AD7124_InputSel ainm, bool enable = false); 
+        int setChannel (uint8_t ch, uint8_t setup, AD7124_InputSel aiPos, AD7124_InputSel aiNeg, bool enable = false); 
 
         //Enable/Disable channel  
         int enableChannel (uint8_t ch, bool enable = true); 
