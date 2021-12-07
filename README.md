@@ -2,10 +2,36 @@
 
 Arduino Library for the Analog Devices AD7124 24bit ADC
 
-The AD7124-4 is a 4 channel, 24 bit, differential ADC (it can also be configured as 7 single ended channels).
+The AD7124-4 is a 4 channel, 24 bit, differential ADC (it can also be configured for up to 7 single ended channels).
 The library was originally written for use with the AD7124 Analog Sensor FeatherWing, but there is no reason it couldn't be used with a raw chip in your own design.
 
 This library has only been tested with SAMD21 so far, but it really should work with any architectures that have a working, Arduino style SPI implementation. 
+
+Most key features of the IC are implemented, though some things are not thoroughly tested.
+
+### Implemented and tested
+- Reading differential voltages
+- Reading single ended voltages
+- Unipolar/bipolar operation
+- Configuring channels and physical pins 
+- Using 'setups' to assign different configurations (reference, gain, filtering) to different channels
+- Bias voltage generator for reading truly bipolar small signal sensors like thermocouples
+- On chip low side switch. *(On NHB boards, this is tied to the enable pin of a 2.5V regulator to provide excitation voltage to bridge sensors.)*
+- Function to read and scale full bridge sensors in one call
+- Function to read thermocouples in one call (Type K only)
+- Function to read internal temperature sensor in one call
+- Probably a bunch of other stuff I am not thinking of right now
+
+### Partially implemented / not fully tested
+- Continuous conversion mode
+- Calibration modes
+
+### Not implemented yet
+- CRC checks on SPI communication
+- Excitation current output (I hope to do this very soon)
+- Built in support for thermocouple types other than Type K
+- Digital outputs on AIN2 and AIN3
+
 
 Basic API  
 --------
@@ -60,11 +86,11 @@ int setAdcControl (AD7124_OperatingModes   mode,
 | `ref_en`       | Sets if the internal reference voltage is enabled<br> *Optional argument, Defaults to true*|
 | `clk_sel`      | Selects clock source the Ad7124 will use<br> *Optional argument, defaults to AD7124_Clk_Internal*| 
 
+<br>
 
 ### AD7124 "Setups"  
 
-
-The AD7124-4 ICs have a feature defined in the datasheet as "Setups". The Setups allow for preconfiguring for different sensor types, independent of which channel they are asigned to. The setups are modeled in the library as an array of setup objects contained within the Ad7124 class. There are 8 individual setups that can be used to hold different configurations.  
+The AD7124-4 ICs have a feature defined in the datasheet as "Setups". The Setups allow for pre-configuring for different sensor types, independent of which channel they are assigned to. The setups are modeled in the library as an array of setup objects contained within the Ad7124 class. There are 8 individual setups that can be used to hold different configurations.  
 
 The two main methods for configuring a setup are `setConfig(..)`, and `setFilter(..)`  
 
@@ -82,7 +108,8 @@ int Ad7124Setup::setConfig(AD7124_RefSources ref, AD7124_GainSel gain,
 | `bipolar`      | Sets for bipolar or unipolar input |
 | `burnout`      | Selects burnout current option <br> *Optional argument, defaults to AD7124_Burnout_Off* |
 | `exRefV`       | Set the reference voltage, if an external reference is used. This value is used internally for calculating voltage from raw ADC counts.<br> *Optional argument, defaults to 2.50* |
-----------------------
+
+<br>
 
 ```cpp
 int Ad7124Setup::setFilter(AD7124_Filters filter, uint16_t fs,
@@ -93,12 +120,12 @@ int Ad7124Setup::setFilter(AD7124_Filters filter, uint16_t fs,
 |   Argument     |    Description                                            |
 | ---------------| --------------------------------------------------------- |
 | `filter`       | Select which filter type to use                           |
-| `fs`           | Filter output rate select bits. can be a value from 1 to 2047. Setting to 1 will give fastest output for the selcted filter. See datasheet for details |
+| `fs`           | Filter output rate select bits. can be a value from 1 to 2047. Setting to 1 will give fastest output for the selected filter. See datasheet for details |
 | `postfilter`   | Selects a post filter option <br> *Optional argument, defaults to AD7124_PostFilter_NoPost* |
 | `rej60`        | Enables a first order notch at 60 Hz when the first notch of the sinc filter is at 50 Hz, allowing simultaneous 50 and 60 Hz rejection. <br>*Optional argument, defaults to false* |
 | `single`       | Enables "single cycle conversion". Has no effect when using multiple channels or when in single conversion mode. <br> *Optional argument, defaults to false* |
 
---------------------------
+<br>
 
 ### Channel Configuration
 
@@ -129,10 +156,10 @@ double readVolts(uint8_t ch);
 ```
 |   Argument     |    Description                                            |
 | ---------------| --------------------------------------------------------- |
-| `ch`           | The channel to read.                                      |  
+| `ch`           | The channel to read.                                      | 
 
   
-`readVolts(buf,chCount)` Can be used to read a nuber of channels at once, though they must start at 0 and be sequential. (e.g. 0 trough 3, or 0 trough 5).  
+`readVolts(buf,chCount)` Can be used to read a number of channels at once, though they must start at 0 and be sequential. (e.g. 0 trough 3, or 0 trough 5).  
 
 ```cpp
 int readVolts(double *buf, uint8_t chCount);
@@ -156,7 +183,7 @@ int32_t readRaw(uint8_t ch);
 | `ch`           | The channel to read.                                      |  
 
 
-`readRaw(buf,chCount)` Can be used to read a nuber of channels at once, though they must start at 0 and be sequential. (e.g. 0 trough 3, or 0 trough 5). 
+`readRaw(buf,chCount)` Can be used to read a number of channels at once, though they must start at 0 and be sequential. (e.g. 0 trough 3, or 0 trough 5). 
 
 ```cpp
 int readRaw(int32_t *buf, uint8_t chCount);
@@ -196,7 +223,7 @@ double readFB(uint8_t ch, double vEx, double scaleFactor);
 
 <br>
 
-The `readIcTemp(ch)` reads the temperature sensor embeded in the AD7124. The channel must be properly configured to read the sensor first.
+The `readIcTemp(ch)` method reads the temperature sensor embedded in the AD7124. The channel must be properly configured to read the sensor first.
 
 ```cpp
 double readIcTemp(uint8_t ch);
@@ -204,6 +231,25 @@ double readIcTemp(uint8_t ch);
 |   Argument     |    Description                                            |
 | ---------------| --------------------------------------------------------- |
 | `ch`           | The channel that is configured to read the internal temperature sensor |
+
+<br>
+
+### Excitation Voltage  
+
+Some sensors like wheatstone bridges, potentiometers, and thermistors, require an excitation voltage to read.
+The NHB Systems AD7124 boards include a 2.5V linear regulator to provide this excitation. The enable pin of the
+regulator is tied to the PSW pin of the AD7124-4 allowing it to be controlled by software. This allows the 
+regulator to be powered down to save power between readings in long term, low speed logging applications. To 
+enable the regulator we just need to call the setPWRSW() method.
+
+The `setPWRSW(bool)` method controls the internal low side switch connected to the PSW pin on the AD7124-4
+
+```cpp
+int setPWRSW(bool enabled);
+```
+|   Argument     |    Description                                            |
+| ---------------| --------------------------------------------------------- |
+| `enabled`      | Sets if switch is enabled (closed) or not (open). *On NHB Systems AD7124 boards, this is tied to a 2.5V linear regulator to provide excitation voltage*
 
 ------------------------  
 

@@ -227,9 +227,11 @@ enum AD7124_regIDs {
 	Reg_REG_NO
 };
 
-// Struct to store the setup values for easy access. This may go away, it's memory wastefull
-// and the info could be extracted from the register info we already have stored
+ 
+// THIS MAY GO AWAY!, it's memory wastefull and the info could
+// be extracted from the register info we already have stored
 // (only used for readVolts now)
+// Struct to store the setup values for easy access.
 struct Ad7124_SetupVals{
     //Config
     AD7124_RefSources ref = AD7124_Ref_ExtRef1;
@@ -263,16 +265,16 @@ class Ad7124Setup{
 
               
         //Sets configuration reg values
-        int setConfig (AD7124_RefSources ref, AD7124_GainSel gain, bool bipolar, AD7124_BurnoutCurrents burnout = AD7124_Burnout_Off, double exRefV = 2.50); 
+        int setConfig(AD7124_RefSources ref, AD7124_GainSel gain, bool bipolar, AD7124_BurnoutCurrents burnout = AD7124_Burnout_Off, double exRefV = 2.50); 
 
         //Sets the filter type and output word rate for a setup
-        int setFilter (AD7124_Filters filter, uint16_t fs, AD7124_PostFilters postfilter = AD7124_PostFilter_NoPost, bool rej60 = false, bool single = false); 
+        int setFilter(AD7124_Filters filter, uint16_t fs, AD7124_PostFilters postfilter = AD7124_PostFilter_NoPost, bool rej60 = false, bool single = false); 
 
         //Set offset for a setup
-        int setOffsetCal (uint32_t value); 
+        int setOffsetCal(uint32_t value); 
 
         //Set gain for a setup
-        int setGainCal (uint32_t value); 
+        int setGainCal(uint32_t value); 
 
 
         //Return the reference voltage
@@ -342,29 +344,29 @@ class Ad7124 {
         
         
         //Sets the ADC Control register
-        int setAdcControl (AD7124_OperatingModes mode, AD7124_PowerModes power_mode, bool ref_en = true, AD7124_ClkSources clk_sel = AD7124_Clk_Internal); 
+        int setAdcControl(AD7124_OperatingModes mode, AD7124_PowerModes power_mode, bool ref_en = true, AD7124_ClkSources clk_sel = AD7124_Clk_Internal); 
 
         //Control the mode of operation for ADC 
-        int setMode (AD7124_OperatingModes mode); 
+        int setMode(AD7124_OperatingModes mode); 
 
 
 
         //Configure a channel
-        int setChannel (uint8_t ch, uint8_t setup, AD7124_InputSel aiPos, AD7124_InputSel aiNeg, bool enable = false); 
+        int setChannel(uint8_t ch, uint8_t setup, AD7124_InputSel aiPos, AD7124_InputSel aiNeg, bool enable = false); 
 
         //Enable/Disable channel  
-        int enableChannel (uint8_t ch, bool enable = true); 
+        int enableChannel(uint8_t ch, bool enable = true); 
 
         //Returns the setup number used by the channel
-        int channelSetup (uint8_t ch); 
+        int channelSetup(uint8_t ch); 
 
         
 
         //Start conversion in single mode
-        int startSingleConversion (uint8_t ch); 
+        int startSingleConversion(uint8_t ch); 
 
         //Waits until a new conversion result is available.
-        int waitEndOfConversion (uint32_t timeout_ms); 
+        int waitEndOfConversion(uint32_t timeout_ms); 
 
         //Returns the last sampling channel
         int currentChannel(); 
@@ -375,13 +377,10 @@ class Ad7124 {
         //Returns the most recent sample in raw ADC counts with 
         //status bits appended (data + status mode)
         int32_t getData();
-
-        //Testing version to use when status bits are appended to data
-        //int32_t getData2();
         
         //Converts raw ADC counts to voltage. The conversion
         //is dependent on the gain, ref voltage, and bipolar mode
-        double toVolts (long value, int gain, double vref, bool bipolar);
+        double toVolts(long value, int gain, double vref, bool bipolar);
 
         //Converts a raw reading from the on chip temp sensor to degrees C
         double tempSensorRawToDegC(long value); 

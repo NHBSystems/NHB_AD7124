@@ -34,7 +34,7 @@
 
 
 // Sets configuration reg values 
-int Ad7124Setup::setConfig (AD7124_RefSources ref, AD7124_GainSel gain, bool bipolar, AD7124_BurnoutCurrents burnout, double exRefV){
+int Ad7124Setup::setConfig(AD7124_RefSources ref, AD7124_GainSel gain, bool bipolar, AD7124_BurnoutCurrents burnout, double exRefV){
     
     //Store these away for easy access later (this is a bit redundant, should proabably just get values from reg struct when needed)
     setupValues.ref = ref;
@@ -60,7 +60,7 @@ int Ad7124Setup::setConfig (AD7124_RefSources ref, AD7124_GainSel gain, bool bip
 }
 
 // Sets the filter type and output word rate for a setup 
-int Ad7124Setup::setFilter (AD7124_Filters filter, uint16_t fs, AD7124_PostFilters postfilter, bool rej60, bool single){
+int Ad7124Setup::setFilter(AD7124_Filters filter, uint16_t fs, AD7124_PostFilters postfilter, bool rej60, bool single){
 
   // Store these away for easy access later 
   // (this is a bit redundant, should proabably just get values from reg struct when needed)
@@ -84,7 +84,7 @@ int Ad7124Setup::setFilter (AD7124_Filters filter, uint16_t fs, AD7124_PostFilte
 }
 
 // Set offset calibration for a setup 
-int Ad7124Setup::setOffsetCal (uint32_t value){
+int Ad7124Setup::setOffsetCal(uint32_t value){
 
   // Store this away for easy access later 
   // (this is a bit redundant, should proabably just get values from reg struct when needed)
@@ -98,7 +98,7 @@ int Ad7124Setup::setOffsetCal (uint32_t value){
 }
 
 // Set gain calibration for a setup 
-int Ad7124Setup::setGainCal (uint32_t value){
+int Ad7124Setup::setGainCal(uint32_t value){
   //Store this away for easy access later
   setupValues.gainCoeff = value;
 
@@ -183,7 +183,7 @@ int Ad7124::begin(){
 }
 
 /////////////////////////////////////////////////////////////////////////////////
-int Ad7124::reset (void) {
+int Ad7124::reset(void) {
   int ret = 0;
 
   // Write 64 1's to reset the chip
@@ -333,7 +333,7 @@ double Ad7124::readFB(uint8_t ch, double vEx, double scaleFactor){
 }
 
 // Sets the ADC Control register 
-int Ad7124::setAdcControl (AD7124_OperatingModes mode, AD7124_PowerModes power_mode, bool ref_en, AD7124_ClkSources clk_sel){
+int Ad7124::setAdcControl(AD7124_OperatingModes mode, AD7124_PowerModes power_mode, bool ref_en, AD7124_ClkSources clk_sel){
   
   regs[Reg_Control].value = AD7124_ADC_CTRL_REG_MODE (mode) |
                             AD7124_ADC_CTRL_REG_POWER_MODE (power_mode) |
@@ -352,7 +352,7 @@ double Ad7124::readIcTemp(uint8_t ch){
 }
 
 // Control the mode of operation for ADC 
-int Ad7124::setMode (AD7124_OperatingModes mode){
+int Ad7124::setMode(AD7124_OperatingModes mode){
    
     regs[Reg_Control].value &= ~AD7124_ADC_CTRL_REG_MODE (0x0F); // clear mode
     regs[Reg_Control].value |= AD7124_ADC_CTRL_REG_MODE (mode);
@@ -361,7 +361,7 @@ int Ad7124::setMode (AD7124_OperatingModes mode){
 } 
 
 // Configure channel 
-int Ad7124::setChannel (uint8_t ch, uint8_t setup, AD7124_InputSel aiPos, AD7124_InputSel aiNeg, bool enable){
+int Ad7124::setChannel(uint8_t ch, uint8_t setup, AD7124_InputSel aiPos, AD7124_InputSel aiNeg, bool enable){
   if ( (ch < 16) && (setup < 8)) {
     
     ch += Reg_Channel_0;
@@ -377,7 +377,7 @@ int Ad7124::setChannel (uint8_t ch, uint8_t setup, AD7124_InputSel aiPos, AD7124
 }
 
 // Enable/Disable channel 
-int Ad7124::enableChannel (uint8_t ch, bool enable){
+int Ad7124::enableChannel(uint8_t ch, bool enable){
   if (ch < 16) {        
     int ret;
 
@@ -424,7 +424,7 @@ int Ad7124::currentChannel() {
 }
 
 // Start a conversion on given channel 
-int Ad7124::startSingleConversion (uint8_t ch) {
+int Ad7124::startSingleConversion(uint8_t ch) {
 
   if (ch < 16) {
     int ret;
@@ -480,7 +480,7 @@ int32_t Ad7124::getData(){
 }
 
 // Convert raw ADC data to volts 
-double Ad7124::toVolts (long value, int gain, double vref, bool bipolar) {
+double Ad7124::toVolts(long value, int gain, double vref, bool bipolar) {
   double voltage = (double) value;
 
   if (bipolar) {
@@ -629,7 +629,7 @@ int Ad7124::writeRegister(AD7124_regIDs id){
 }
 
 // Wait for device to be ready for read or write 
-int Ad7124::waitForSpiReady (uint32_t timeout) {
+int Ad7124::waitForSpiReady(uint32_t timeout) {
     int  ret;
     bool ready = false;
     //bool timeout_en;
@@ -659,7 +659,7 @@ int Ad7124::waitForSpiReady (uint32_t timeout) {
 }
 
 // Waits until power-on reset finishes 
-int Ad7124::waitForPowerOn (uint32_t timeout) {
+int Ad7124::waitForPowerOn(uint32_t timeout) {
     int ret;
     bool powered_on = false;
     
@@ -686,7 +686,7 @@ int Ad7124::waitForPowerOn (uint32_t timeout) {
 }
 
 // Waits until a new conversion result is available. 
-int Ad7124::waitForConvReady (uint32_t timeout) {
+int Ad7124::waitForConvReady(uint32_t timeout) {
   int ret;
   bool ready = false;
   
