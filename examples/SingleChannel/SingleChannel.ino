@@ -37,6 +37,8 @@ Ad7124 adc(ssPin, 4000000);
 // The filter select bits determine the filtering and ouput data rate
 // 1 = Minimum filter, Maximum sample rate
 // 2047 = Maximum filter, Minumum sample rate
+// A setting of 1 with this configuration gets about 1500 sps, but the 
+// readings may be noisy
 uint16_t filterSelectBits = 1;
 
 
@@ -59,7 +61,6 @@ void setup() {
   // - use the external reference tied to the excitation voltage (2.5V reg)
   // - gain of 128 for a bipolar measurement of +/- 19.53 mv
   adc.setup[0].setConfig(AD7124_Ref_ExtRef1, AD7124_Gain_128, true);
-  //adc.setup[0].setConfig(AD7124_Ref_ExtRef1, AD7124_Gain_128, true, AD7124_Burnout_Off, 2.50); // With optional args
 
   // Set filter type and data rate select bits (defined above)
   adc.setup[0].setFilter(AD7124_Filter_SINC3, filterSelectBits);
@@ -73,18 +74,25 @@ void setup() {
 
 
 void loop() {
-  double voltage;
+  double reading;
   long dt;
   
+  // Take readings, and measure how long it takes. You can change the
+  // filterSelectBits above and see how it affects the output rate and
+  // the noise in your signal.
+  // NOTE: On some architectures micros() is not very accurate 
+  dt = micros(); 
 
-  //Take readings, and measure how long it takes
-  //NOTE: On some architectures micros() is not very accurate 
-  dt = micros();   
-  voltage = adc.readVolts(0);     
+  // Read a loadcell on channel 0
+  reading = adc.readFB(0, 2.5, 5.00);  // 5.00 scaling for my 10 lb load cell 
+                                       // Change scaling to 1.00 for mV/V
+  
+  //reading = adc.readVolts(0); // <--You could use this to just read volts
+
   dt = micros() - dt;
+  
 
-
-  Serial.print(voltage, DEC);
+  Serial.print(reading, DEC);
   Serial.print('\t');
   Serial.print("dt=");
   Serial.print(dt);

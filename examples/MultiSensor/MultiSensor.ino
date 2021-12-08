@@ -15,7 +15,7 @@
   
   The channels are configured as follows: 
 
-  Channel 0   Differnetial    Load Cell (or other full bridge)
+  Channel 0   Differential    Load Cell (or other full bridge)
   Channel 1   Differential    Thermocouple
   Channel 2   Differential    Thermocouple   
   Channel 3   Single Ended    Potentiometer
@@ -54,8 +54,8 @@ Ad7124 adc(ssPin, 4000000);
 // The filter select bits determine the filtering and ouput data rate
 // 1 = Minimum filter, Maximum sample rate
 // 2047 = Maximum filter, Minumum sample rate
-// A setting of 13 gets us about 50 sps with this channel configuration
-int filterSelBits = 13; 
+// A setting of 45 gets us about 20 sps with this channel configuration
+int filterSelBits = 45; //13 ~= 50 sps, 18 ~= 40 sps
 
 
 void setup() {
@@ -123,13 +123,15 @@ void loop() {
   double readings[CH_COUNT];
   long dt;
 
-  //Take readings, and measure how long it takes just for fun
-  //NOTE: On some architectures micros() is not very accurate 
+  // Take readings, and measure how long it takes. You can change the
+  // filterSelectBits above and see how it affects the output rate and
+  // the noise in your signals.
+  // NOTE: On some architectures micros() is not very accurate 
   dt = micros();
 
   double junctionTemp = adc.readIcTemp(5); 
   
-  readings[0] = adc.readFB(0,2.5, 5.00); //5.00 scaling for 10 lb load cell I use for testing
+  readings[0] = adc.readFB(0, 2.5, 5.00); //5.00 scaling for 10 lb load cell I use for testing
   readings[1] = adc.readTC(1, junctionTemp, Type_K); 
   readings[2] = adc.readTC(2, junctionTemp, Type_K);
   readings[3] = adc.readVolts(3);

@@ -2,23 +2,30 @@
 
 Arduino Library for the Analog Devices AD7124 24bit ADC
 
-The AD7124-4 is a 4 channel, 24 bit, differential ADC (it can also be configured for up to 7 single ended channels).
-The library was originally written for use with the AD7124 Analog Sensor FeatherWing, but there is no reason it couldn't be used with a raw chip in your own design.
+The AD7124-4 is a 4 channel, 24 bit, differential ADC (it can also be configured 
+for up to 7 single ended channels). The library was originally written for use 
+with the [NHB AD7124 Analog Sensor FeatherWing](https://www.tindie.com/products/24680/), 
+but there is no reason it couldn't be used with a raw chip in your own design.
 
-This library has only been tested with SAMD21 so far, but it really should work with any architectures that have a working, Arduino style SPI implementation. 
+This library has only been tested with SAMD21 so far, but it really should work 
+with any architectures that have a working, Arduino style SPI implementation. 
 
-Most key features of the IC are implemented, though some things are not thoroughly tested.
+Most key features of the IC are implemented, though some things are not 
+thoroughly tested.
 
 ### Implemented and tested
 - Reading differential voltages
 - Reading single ended voltages
 - Unipolar/bipolar operation
 - Configuring channels and physical pins 
-- Using 'setups' to assign different configurations (reference, gain, filtering) to different channels
-- Bias voltage generator for reading truly bipolar small signal sensors like thermocouples
-- On chip low side switch. *(On NHB boards, this is tied to the enable pin of a 2.5V regulator to provide excitation voltage to bridge sensors.)*
+- Using 'setups' to assign different configurations (reference, gain, filtering) 
+  to different channels
+- Bias voltage generator for reading truly bipolar small signal sensors like 
+  thermocouples
+- On chip low side switch. *(On NHB boards, this is tied to the enable pin of a 
+  2.5V regulator to provide excitation voltage to bridge sensors.)*
 - Function to read and scale full bridge sensors in one call
-- Function to read thermocouples in one call (Type K only)
+- Function to read thermocouples in one call (Type K only for now)
 - Function to read internal temperature sensor in one call
 - Probably a bunch of other stuff I am not thinking of right now
 
@@ -48,7 +55,9 @@ Ad7124(uint8_t csPin, uint32_t spiFrequency);
 |*spiFrequency* | SPI bus frequency to use|
 
 
-You will also need to cal the standard Arduino style begin method in your setup() function to initialize the Ad7124 chip. It takes no arguments.
+You will also need to cal the standard Arduino style begin method in your 
+setup() function to initialize the Ad7124 chip. It takes no arguments.  
+
 ```c
 begin();
 ```
@@ -129,7 +138,8 @@ int Ad7124Setup::setFilter(AD7124_Filters filter, uint16_t fs,
 
 ### Channel Configuration
 
-We need need to define what inputs are used by each channel and what setup will be used. This is done with the `setChannel(..)` method.
+We need need to define what inputs are used by each channel and what setup will 
+be used. This is done with the `setChannel(..)` method.
 
 ```cpp
 int setChannel (uint8_t ch, uint8_t setup, AD7124_InputSel aiPos, 
@@ -148,7 +158,10 @@ int setChannel (uint8_t ch, uint8_t setup, AD7124_InputSel aiPos,
 
 ### Getting Readings
 
-There are a few different methods to get readings from the ADC. The most obvious one is readVolts(..). The basic version simply returns the voltage on the given channel. There is also an overloaded version that will read a sequential group of channels into a buffer.
+There are a few different methods to get readings from the ADC. The most obvious 
+one is readVolts(..). The basic version simply returns the voltage on the given 
+channel. There is also an overloaded version that will read a sequential group 
+of channels into a buffer.
   
 `readVolts(ch)` Returns a voltage reading for the given channel
 ```cpp 
@@ -159,7 +172,8 @@ double readVolts(uint8_t ch);
 | `ch`           | The channel to read.                                      | 
 
   
-`readVolts(buf,chCount)` Can be used to read a number of channels at once, though they must start at 0 and be sequential. (e.g. 0 trough 3, or 0 trough 5).  
+`readVolts(buf,chCount)` Can be used to read a number of channels at once, 
+though they must start at 0 and be sequential. (e.g. 0 trough 3, or 0 trough 5).  
 
 ```cpp
 int readVolts(double *buf, uint8_t chCount);
@@ -171,7 +185,9 @@ int readVolts(double *buf, uint8_t chCount);
 
 <br>
 
-The readRaw(..) methods are provided for lower level access to the raw ADC counts. Like readVolts() there is an overloaded version that will read multiple channels into a buffer.
+The readRaw(..) methods are provided for lower level access to the raw ADC 
+counts. Like readVolts() there is an overloaded version that will read multiple 
+channels into a buffer.
   
 The `readRaw(chan)` Returns the raw ADC counts for the given channel  
 
@@ -183,7 +199,8 @@ int32_t readRaw(uint8_t ch);
 | `ch`           | The channel to read.                                      |  
 
 
-`readRaw(buf,chCount)` Can be used to read a number of channels at once, though they must start at 0 and be sequential. (e.g. 0 trough 3, or 0 trough 5). 
+`readRaw(buf,chCount)` Can be used to read a number of channels at once, though 
+they must start at 0 and be sequential. (e.g. 0 trough 3, or 0 trough 5). 
 
 ```cpp
 int readRaw(int32_t *buf, uint8_t chCount);
@@ -197,7 +214,9 @@ int readRaw(int32_t *buf, uint8_t chCount);
 
 There are also a few sensor specific read functions provided for convenience.  
   
-The `readTC(ch,refTemp, type)` method is intended to simplify reading thermocouples. It currently only supports Type K thermocouples, but I intend to add more types in the future. 
+The `readTC(ch,refTemp, type)` method is intended to simplify reading 
+thermocouples. It currently only supports Type K thermocouples, but I intend to 
+add more types in the future. 
 
 ```cpp
 double readTC(uint8_t ch, double refTemp, TcTypes type)
@@ -210,7 +229,10 @@ double readTC(uint8_t ch, double refTemp, TcTypes type)
 
 <br>
 
-The `readFB(ch, vEx, scaleFactor)` method is for reading full bridge type sensors (load cells, pressure gauges, extensometers, ...). It could also be used for potentiometers as long as you have setup the channel properly. Returns mV/V if scale factor is one (default)
+The `readFB(ch, vEx, scaleFactor)` method is for reading full bridge type 
+sensors (load cells, pressure gauges, extensometers, ...). It could also be 
+used for potentiometers as long as you have setup the channel properly. Returns 
+mV/V if scale factor is one (default)  
 
 ```cpp
 double readFB(uint8_t ch, double vEx, double scaleFactor);
@@ -223,7 +245,8 @@ double readFB(uint8_t ch, double vEx, double scaleFactor);
 
 <br>
 
-The `readIcTemp(ch)` method reads the temperature sensor embedded in the AD7124. The channel must be properly configured to read the sensor first.
+The `readIcTemp(ch)` method reads the temperature sensor embedded in the AD7124. 
+The channel must be properly configured to read the sensor first.
 
 ```cpp
 double readIcTemp(uint8_t ch);
@@ -236,13 +259,16 @@ double readIcTemp(uint8_t ch);
 
 ### Excitation Voltage  
 
-Some sensors like wheatstone bridges, potentiometers, and thermistors, require an excitation voltage to read.
-The NHB Systems AD7124 boards include a 2.5V linear regulator to provide this excitation. The enable pin of the
-regulator is tied to the PSW pin of the AD7124-4 allowing it to be controlled by software. This allows the 
-regulator to be powered down to save power between readings in long term, low speed logging applications. To 
-enable the regulator we just need to call the setPWRSW() method.
+Some sensors like wheatstone bridges, potentiometers, and thermistors, require 
+an excitation voltage to read. The NHB Systems AD7124 boards include a 2.5V 
+linear regulator to provide this excitation. The enable pin of the regulator 
+is tied to the PSW pin of the AD7124-4 allowing it to be controlled by software. 
+This allows the regulator to be powered down to save power between readings in 
+long term, low speed logging applications. To enable the regulator we just need 
+to call the setPWRSW() method.
 
-The `setPWRSW(bool)` method controls the internal low side switch connected to the PSW pin on the AD7124-4
+The `setPWRSW(bool)` method controls the internal low side switch connected to 
+the PSW pin on the AD7124-4
 
 ```cpp
 int setPWRSW(bool enabled);
