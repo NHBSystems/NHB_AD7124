@@ -30,8 +30,7 @@ thoroughly tested.
 - Probably a bunch of other stuff I am not thinking of right now
 
 ### Partially implemented / not fully tested
-- Continuous conversion mode
-- Calibration modes
+- Modes other than single conversion (i.e. continuos, shutdown, calibration)
 
 ### Not implemented yet
 - CRC checks on SPI communication

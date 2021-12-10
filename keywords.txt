@@ -5,33 +5,33 @@
 #######################################
 # Datatypes (KEYWORD1)
 #######################################
-Ad7124  KEYWORD1
+Ad7124	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
 
-begin   KEYWORD2
-reset   KEYWORD2
-setPWRSW    KEYWORD2
-readRaw KEYWORD2
-readVolts   KEYWORD2
-readTC  KEYWORD2
-readFB  KEYWORD2
-readIcTemp  KEYWORD2
-setVBias    KEYWORD2
-setTimeout  KEYWORD2
-setAdcControl   KEYWORD2
-setMode KEYWORD2
-setChannel  KEYWORD2
-enableChannel   KEYWORD2
-channelSetup    KEYWORD2
-startSingleConversion   KEYWORD2
-waitEndOfConversion KEYWORD2
-currentChannel  KEYWORD2
-status  KEYWORD2
-toVolts KEYWORD2
-tempSensorRawToDegC KEYWORD2
+begin	KEYWORD2
+reset	KEYWORD2
+setPWRSW	KEYWORD2
+readRaw	KEYWORD2
+readVolts	KEYWORD2
+readTC	KEYWORD2
+readFB	KEYWORD2
+readIcTemp	KEYWORD2
+setVBias	KEYWORD2
+setTimeout	KEYWORD2
+setAdcControl	KEYWORD2
+setMode	KEYWORD2
+setChannel	KEYWORD2
+enableChannel	KEYWORD2
+channelSetup	KEYWORD2
+startSingleConversion	KEYWORD2
+waitEndOfConversion	KEYWORD2
+currentChannel	KEYWORD2
+status	KEYWORD2
+toVolts	KEYWORD2
+tempSensorRawToDegC	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)

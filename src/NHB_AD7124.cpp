@@ -151,7 +151,7 @@ Ad7124::Ad7124(uint8_t csPin, uint32_t spiFrequency)
   }
 }
 
-////////////////////////////////////////////////////////////////////////////////
+// Standard Arduino style begin(). Initializes SPI and resets the AD7124-4 IC
 int Ad7124::begin()
 {
   int ret;
@@ -162,12 +162,12 @@ int Ad7124::begin()
   return reset(); // Must be removed for testing below
 
   // ******************* Preconfigured IC Temp Sensor code ************************
-  // Test if we can pre configure the IC temp sensor here. May put this in it's own
-  // method later. May also turn out to be entirely unnecessary
+  // Test if we can pre configure the IC temp sensor here. May put this in it's 
+  // own method later. May also turn out to be entirely unnecessary
   // Setup 7 will be reserved for temp sensor
   //
-  // TESTED - This does seems to work, however there may be other pitfalls - 10-10-2021
-  // UPDATE: I don't think I'm going to persue this anymore for right now, but it does
+  // TESTED - This does seems to work, however there may be other pitfalls so
+  // I don't think I'm going to persue this anymore for right now, but it does
   // work so I'll keep it here for a bit in case I change my mind - 10-11-2021
 
   // ret = reset();
@@ -191,7 +191,7 @@ int Ad7124::begin()
   // *****************************************************************************
 }
 
-////////////////////////////////////////////////////////////////////////////////
+// Reset the AD7124 IC to power on defaults
 int Ad7124::reset(void)
 {
   int ret = 0;
@@ -206,7 +206,7 @@ int Ad7124::reset(void)
   return waitForPowerOn(timeout);
 }
 
-////////////////////////////////////////////////////////////////////////////////
+// Enables (closes) the on-chip low side power switch.
 int Ad7124::setPWRSW(bool enabled)
 {
 
@@ -220,7 +220,8 @@ int Ad7124::setPWRSW(bool enabled)
   return writeRegister(Reg_IOCon1);
 }
 
-////////////////////////////////////////////////////////////////////////////////
+// Sets enables the bias voltage generator on the given pin. A bias voltage
+// is necessary to read truly bipolar output from thermocouples 
 int Ad7124::setVBias(AD7124_VBiasPins vBiasPin, bool enabled)
 {
 
