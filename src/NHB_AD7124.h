@@ -27,11 +27,13 @@
 #ifndef NHB_AD7124
 #define NHB_AD7124
 
+#include <Arduino.h>
 #include <SPI.h>
 #include "AD_Defs.h"
 #include "Thermocouple.h"
 
-#define AD7124_DEFAULT_TIMEOUT_MS 200 //milliseconds
+#define AD7124_DEFAULT_TIMEOUT_MS 200 // milliseconds
+#define AD7124_MAX_CHANNELS 16 // not sure if this will be used yet
 
 enum AD7124_OperatingModes
 {
@@ -158,6 +160,7 @@ enum AD7124_BurnoutCurrents
 // TODO: Look up actual value in datasheet (IO_CONTROL_1 Register)
 enum AD7124_ExCurrents
 {
+    AD7124_ExCurrent_Off = 0x00,
     AD7124_ExCurrent_50uA,
     AD7124_ExCurrent_100uA,
     AD7124_ExCurrent_250uA,
@@ -238,6 +241,7 @@ enum AD7124_regIDs
     Reg_REG_NO
 };
 
+
 // THIS MAY GO AWAY!, it's memory wastefull and the info could
 // be extracted from the register info we already have stored
 // (only used for readVolts now)
@@ -264,9 +268,15 @@ struct Ad7124_SetupVals
     double refV = 2.500; //Can be set to accommodate a different external ref voltage
 };
 
+struct Ad7124_Readings
+{
+    double value;
+    uint8_t ch;
+};
+
 class Ad7124;
 
-//Class to manage the AD7124 "setups"
+//Subclass to manage the AD7124 "setups"
 class Ad7124Setup
 {
 
@@ -316,37 +326,60 @@ public:
     Ad7124(uint8_t csPin, uint32_t spiFrequency);
 
     int begin();
-    int reset();
 
-    //Enable or disable the onboard PWR_SW FET
-    int setPWRSW(bool enabled);
+    //Resets the Ad7124 by sending 64 consecutive 1s
+    int reset();
+    
+
+
 
     //Read a single channel in single conversion mode and
     //return the value in raw ADC counts
-    int32_t readRaw(uint8_t ch);
+    int readRaw(uint8_t ch);
 
     //Read each enabled channel in single conversion mode and
-    //return the values in raw ADC counts
-    int readRaw(int32_t *buf, uint8_t chCount);
+    //return the values in raw ADC counts    
+    int readRaw(Ad7124_Readings *buf, uint8_t chCount);
 
     //Read a single channel in single conversion mode
     //return the value in voltage
     double readVolts(uint8_t ch);
 
     //Read multiple channels in single conversion mode
-    //return the readings in voltage
-    int readVolts(double *buf, uint8_t chCount);
+    //return the readings in voltage    
+    int readVolts(Ad7124_Readings *buf, uint8_t chCount);
 
     //Read thermocouple. Currently only Type K is supported.
     //The channel must first be setup properly for reading thermocouples.
-    double readTC(uint8_t ch, double refTemp, TcTypes type = Type_K);
+    double readTC(uint8_t ch, double refTemp, TcTypes type = Type_K);    
 
     //Read a 4 wire full bridge sensor. Return value can be scaled with
     //optional scaleFactor arg. Returns mV/V if scale factor is one (default)
-    double readFB(uint8_t ch, double vEx, double scaleFactor = 1.000);
+    double readFB(uint8_t ch, double vEx, double scaleFactor = 1.000);    
 
-    //Read the on chip temp sensor. EXPERIMENTAL
+    //Reads the on chip temp sensor and returns the value in degrees C
     double readIcTemp(uint8_t ch);
+
+    //Converts raw ADC counts to voltage. The conversion is dependent
+    //on channel specific settings like gain and reference voltage   
+    double toVolts(double value, uint8_t ch);
+    
+    //Convert a voltage from a 4 wire full bridge sensor. Return value can be 
+    //scaled with optional scaleFactor arg. Returns mV/V if scale factor is one 
+    double scaleFB(double volts, double vEx, double scaleFactor = 1.000);
+
+    //Convert a voltage from a thermocouple. Currently only Type K is supported.
+    //The channel must first be setup properly for reading thermocouples.
+    double scaleTC(double volts, double refTemp, TcTypes type = Type_K);
+
+    //Converts a raw reading from the on chip temp sensor to degrees C
+    double scaleIcTemp(double value);  
+
+
+
+   
+    //Enable or disable the onboard PWR_SW FET
+    int setPWRSW(bool enabled);
 
     //Enable bias voltage on given channel
     int setVBias(AD7124_VBiasPins vBiasPin, bool enabled);
@@ -371,14 +404,12 @@ public:
     //Enable/Disable channel
     int enableChannel(uint8_t ch, bool enable = true);
 
+
+
+
     //Returns the setup number used by the channel
     int channelSetup(uint8_t ch);
-
-    //Start conversion in single mode
-    int startSingleConversion(uint8_t ch);
-
-    //Waits until a new conversion result is available.
-    int waitEndOfConversion(uint32_t timeout_ms);
+    
 
     //Returns the last sampling channel
     int currentChannel();
@@ -386,20 +417,30 @@ public:
     //Return the the status register contents
     int status();
 
+    //Return if channel is enabled
+    bool enabled(uint8_t ch);
+
+    //Return the current operating mode
+    AD7124_OperatingModes mode();
+
+
+        
+    //Waits until a new conversion result is available.
+    //This would be private, but I made it public in case someone wants
+    //to implement there own synchronized continuouse mode function
+    int waitEndOfConversion(uint32_t timeout_ms);
+
     //Returns the most recent sample in raw ADC counts with
     //status bits appended (data + status mode)
+    //This would be private, but I made it public in case someone wants
+    //to implement there own synchronized continuouse mode function
     int32_t getData();
 
-    //Converts raw ADC counts to voltage. The conversion
-    //is dependent on the gain, ref voltage, and bipolar mode
-    double toVolts(long value, int gain, double vref, bool bipolar);
-
-    //Converts a raw reading from the on chip temp sensor to degrees C
-    double tempSensorRawToDegC(long value);
 
     Ad7124Setup setup[8];
 
 private:
+
     int noCheckReadRegister(Ad7124_Register *reg);
     int noCheckWriteRegister(Ad7124_Register reg);
 
@@ -416,14 +457,17 @@ private:
     void updateDevSpiSettings(void);
     void spiWriteAndRead(uint8_t *data, uint8_t numBytes);
 
+
+
     SPISettings spiSettings;
     Thermocouple thermocouple;
-
     bool crcEnabled = false;
     bool isReady = true; //Not really used now, may go away [8-26-21]
     uint8_t cs;
     uint32_t timeout = AD7124_DEFAULT_TIMEOUT_MS;
 
+    friend class Ad7124Setup;
+    
     //Init regs struct with power on default values
     Ad7124_Register regs[Reg_REG_NO] = {
         {0x00, 0x00, 1, 2},     /* Status */
@@ -485,7 +529,7 @@ private:
         {0x38, 0x500000, 3, 1}, /* Gain_7 */
     };
 
-    friend class Ad7124Setup;
+    
 };
 
 #endif

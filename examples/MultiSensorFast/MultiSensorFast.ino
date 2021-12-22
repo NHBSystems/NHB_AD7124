@@ -1,11 +1,29 @@
 /*
-  AD7124 Multiple sensor type example
+  AD7124 Multiple sensor example 2
 
-  Demonstrate how to read multiple sensors of different types using different 
-  channel configurations. This example configures the AD7124 for 3 differential
-  and 2 single ended channels. It also reads the internal temperature sensor
-  and uses it for the cold junction reference temperature. Readings are done
-  in single conversion mode.
+  Demonstrate another way to read multiple channels that can be used in either 
+  single conversion or continuous conversion mode. like the other MultiSensor 
+  example, this example configures the AD7124 for 3 differential and 2 single 
+  ended channels and reads the internal temperature sensor and uses it for the 
+  cold junction reference. When running in continuous conversion mode, you MUST 
+  use the multi-channel form of the readVolts(..) or readRaw(..) methods when 
+  reading more than one channel. You then scale your sensor readings from 
+  voltage after taking the readings. This works well in single conversion mode 
+  too, and can be considerably faster than using the single channel read methods.
+
+  NOTE: Continuous conversion mode may not play nice with other devices on the 
+  SPI bus, especially if running at high output rates. 
+
+  NOTE 2: Perhaps counterintuitively, you can often get higher effective sample 
+  rates with single conversion mode when reading multiple channels. You will
+  also see less "jitter" in the timing when sampling at faster rates. The reason
+  is that when reading multiple channels in continuous mode and performing other
+  tasks (especially on slower hardware), there can be what amounts to framing 
+  errors because the read happens in the middle of the group of channels. When 
+  this occurs, the data gets thrown out and the read function waits for the next
+  full set of readings to store in the buffer. In single conversion mode, we 
+  manually start the conversion for each set of readings, so the framing is 
+  always correct. 
 
   Uses the switched 2.5V excitation provided on the NHB AD7124 board, which must
   be turned on before reading the sensor. On NHB boards the on chip low side switch
@@ -22,7 +40,7 @@
   Channel 3   Single Ended    Potentiometer
   Channel 4   Single Ended    Potentiometer
   Channel 5   Internal        IC Temperature  
-
+ 
 
   For more on AD7124, see
   http://www.analog.com/media/en/technical-documentation/data-sheets/AD7124-4.pdf
@@ -42,26 +60,24 @@
 
 #define CH_COUNT 6 // 3 differential channels + 2 single ended + internal temperature sensor
 
-const uint8_t csPin = 10;
+
+// You can run this example in either single conversion or continuous mode.
+// Uncomment the desired mode below
+#define CONVMODE  AD7124_OpMode_SingleConv
+//#define CONVMODE  AD7124_OpMode_Continuous
+
+
+
+// The filter select bits determine the filtering and ouput data rate
+// 1 = Minimum filter, Maximum sample rate
+// 2047 = Maximum filter, Minumum sample rate
+int filterSelBits = 4; 
+
+
+
+const uint8_t csPin = 10; // Change if
 
 Ad7124 adc(csPin, 4000000);
-
-
- 
-// The filter select bits determine the filtering and ouput data rate
-//     1 = Minimum filter, Maximum sample rate
-//  2047 = Maximum filter, Minumum sample rate
-//
-// For this example I'll use a setting of 45, which will give us about 20 sps
-// with this channel configuration.
-//
-// Of course you can always take your readings at a SLOWER rate than
-// the output data rate. (i.e. logging a reading every  30 seconds)
-//
-// NOTE: Actual output data rates in single conversion mode will be slower
-// than calculated using the formula in the datasheet. This is because of
-// the settling time plus the time it takes to enable or change the channel.
-int filterSelBits = 45; //13 ~= 50 sps, 18 ~= 40 sps
 
 
 void setup() {
@@ -77,18 +93,18 @@ void setup() {
   // Initializes the AD7124 device
   adc.begin();
 
-  // Configuring ADC in Full Power Mode (Fastest) 
-  adc.setAdcControl (AD7124_OpMode_SingleConv, AD7124_FullPower, true);
+  // Configuring ADC for chosen conversion mode and full power 
+  adc.setAdcControl (CONVMODE, AD7124_FullPower, true);
 
  
   // Set the "setup" configurations for different sensor types. There are 7 differnet "setups"
   // in the ADC that can be configured. There are 8 setups that can be configured. Each 
   // setup holds settings for the reference used, the gain setting, filter type, and rate
 
-  adc.setup[0].setConfig(AD7124_Ref_ExtRef1, AD7124_Gain_128, true);    // Load Cell:           External reference tied to excitation, Gain = 128, Bipolar = True
-  adc.setup[1].setConfig(AD7124_Ref_Internal, AD7124_Gain_32, true);    // Thermocouple:        Internal reference, Gain = 128, Bipolar = True  
-  adc.setup[2].setConfig(AD7124_Ref_ExtRef1, AD7124_Gain_1, false);     // Ratiometric Voltage: External reference tied to excitation, Gain = 1, Bipolar = False
-  adc.setup[3].setConfig(AD7124_Ref_Internal, AD7124_Gain_1, true);     // IC Temp sensor:      Internal reference, Gain = 1, Bipolar = True
+  adc.setup[0].setConfig(AD7124_Ref_ExtRef1, AD7124_Gain_128, true); // Load Cell:           External reference tied to excitation, Gain = 128, Bipolar = True
+  adc.setup[1].setConfig(AD7124_Ref_Internal, AD7124_Gain_32, true); // Thermocouple:        Internal reference, Gain = 32, Bipolar = True  
+  adc.setup[2].setConfig(AD7124_Ref_ExtRef1, AD7124_Gain_1, false);  // Ratiometric Voltage: External reference tied to excitation, Gain = 1, Bipolar = False
+  adc.setup[3].setConfig(AD7124_Ref_Internal, AD7124_Gain_1, true);  // IC Temp sensor:      Internal reference, Gain = 1, Bipolar = True
 
 
 
@@ -126,7 +142,7 @@ void setup() {
 
 void loop() {
 
-  double readings[CH_COUNT];
+  Ad7124_Readings readings[CH_COUNT];  
   long dt;
 
   // Take readings, and measure how long it takes. You can change the
@@ -135,33 +151,35 @@ void loop() {
   // NOTE: On some architectures micros() is not very accurate 
   dt = micros();
   
-  double junctionTemp = adc.readIcTemp(5); 
-  
-  readings[0] = adc.readFB(0, 2.5, 5.00); //5.00 scaling load cell I test with
-  readings[1] = adc.readTC(1, junctionTemp, Type_K); 
-  readings[2] = adc.readTC(2, junctionTemp, Type_K);
-  readings[3] = adc.readVolts(3);
-  readings[4] = adc.readVolts(4);
+  //We need to just read voltage from all channels first when using
+  //continuous conversion mode, but it also works well for single
+  //conversion mode when reading mutiple channels.
+  //
+  //NOTE: The on-chip temperature sensor will be returned
+  //as raw adc counts because it is not a voltage measurement.
+  adc.readVolts(readings,CH_COUNT); 
 
   dt = micros() - dt;
-
+  
+  // Now we can apply the appropriate scaling. 
+  // The potentiometers will be left as voltage for this example
+  readings[5].value = adc.scaleIcTemp(readings[5].value);
+  readings[0].value = adc.scaleFB(readings[0].value, 2.5, 5.00);
+  readings[1].value = adc.scaleTC(readings[1].value,readings[5].value, Type_K);
+  readings[2].value = adc.scaleTC(readings[2].value,readings[5].value, Type_K);
 
 
   // You would probably do something more interesting with the readings here
   // but we'll just print them out for our example.
 
-  Serial.print(readings[0], DEC); //Load Cell
-  Serial.print('\t');
-  Serial.print(readings[1], DEC); //Thermocouple
-  Serial.print('\t');
-  Serial.print(readings[2], DEC); //Thermocouple
-  Serial.print('\t');
-  Serial.print(readings[3], DEC); //Potentiometer
-  Serial.print('\t');
-  Serial.print(readings[4], DEC); //Potentiometer
-  Serial.print('\t');
-  Serial.print(junctionTemp, DEC); //IC Temp
-  Serial.print('\t');
+  for(int i = 0; i < CH_COUNT; i++){
+    Serial.print("Ch");
+    Serial.print(readings[i].ch);
+    Serial.print(' ');
+    Serial.print(readings[i].value, DEC); //Load Cell
+    Serial.print('\t');
+  }  
+
   Serial.print("dt=");
   Serial.print(dt);
   Serial.print("uS");

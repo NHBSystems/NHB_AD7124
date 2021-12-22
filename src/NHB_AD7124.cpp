@@ -132,7 +132,7 @@ bool Ad7124Setup::bipolar()
 uint8_t Ad7124Setup::gain()
 {
   //We can left shift 1 by the values of the AD7124_GainSel enum elements
-  //to yeald the actual gain value (e.g.  1 << AD7124_Gain_128 = 128)
+  //to yield the actual gain value (e.g.  1 << AD7124_Gain_128 = 128)
   return 1 << (uint8_t)setupValues.gain;
 }
 
@@ -141,8 +141,7 @@ Ad7124::Ad7124(uint8_t csPin, uint32_t spiFrequency)
   cs = csPin;
 
   spiSettings = SPISettings(spiFrequency, MSBFIRST, SPI_MODE3);
-
-  //isReady = false; [Commented out 8-26-21]
+  
   crcEnabled = false;
 
   for (int i = 0; i < 8; i++)
@@ -159,36 +158,7 @@ int Ad7124::begin()
   pinMode(cs, OUTPUT);
   SPI.begin();
 
-  return reset(); // Must be removed for testing below
-
-  // ******************* Preconfigured IC Temp Sensor code ************************
-  // Test if we can pre configure the IC temp sensor here. May put this in it's 
-  // own method later. May also turn out to be entirely unnecessary
-  // Setup 7 will be reserved for temp sensor
-  //
-  // TESTED - This does seems to work, however there may be other pitfalls so
-  // I don't think I'm going to persue this anymore for right now, but it does
-  // work so I'll keep it here for a bit in case I change my mind - 10-11-2021
-
-  // ret = reset();
-  // if (ret < 0) {
-  //   return ret;
-  // }
-
-  // ret = setup[7].setConfig(AD7124_Ref_Internal, AD7124_Gain_1, true);
-  // if (ret < 0) {
-  //   return ret;
-  // }
-
-  // ret = setup[7].setFilter(AD7124_Filter_SINC3, 80);
-  // if (ret < 0) {
-  //   return ret;
-  // }
-
-  // // Channel 15 reserved for temp sensor
-  // return setChannel(15, 7, AD7124_Input_TEMP, AD7124_Input_AVSS, true);
-
-  // *****************************************************************************
+  return reset(); 
 }
 
 // Reset the AD7124 IC to power on defaults
@@ -235,8 +205,9 @@ int Ad7124::setVBias(AD7124_VBiasPins vBiasPin, bool enabled)
   return writeRegister(Reg_IOCon2);
 }
 
+
 // Get a reading in raw counts from a single channel
-int32_t Ad7124::readRaw(uint8_t ch)
+int Ad7124::readRaw(uint8_t ch)
 {
   int ret;
   uint8_t cur_ch = currentChannel(); // <-- Remember, this only works properly when using Data + Status mode
@@ -251,19 +222,41 @@ int32_t Ad7124::readRaw(uint8_t ch)
     }
 
     //Moved here so only called if channel changed
-    ret = startSingleConversion(ch); //This calls enable channel internally
-    if (ret < 0)
+    if(mode() == AD7124_OpMode_SingleConv)
     {
-      return ret;
+      ret = enableChannel(ch, true);
+      if (ret < 0)
+      {
+        return ret;
+      }
+
+      // write the mode register again to start the conversion.
+      ret = setMode(AD7124_OpMode_SingleConv);
+      if (ret < 0)
+      {
+        return ret;
+      }
+    } 
+    // If in continuous mode, just enable the channel we want to read now
+    else
+    {
+      ret = enableChannel(ch, true);
+      if (ret < 0){
+        return ret;
+      }
     }
   }
   // If no channel change, just call setMode
   else
   {
-    ret = setMode(AD7124_OpMode_SingleConv);
-    if (ret < 0)
-    {
-      return ret;
+    // If we are in single conversion mode, we need to write the mode  
+    // register again to start the conversion.
+    if(mode() == AD7124_OpMode_SingleConv){
+      ret = setMode(AD7124_OpMode_SingleConv);
+      if (ret < 0)
+      {
+        return ret;
+      }
     }
   }
 
@@ -276,39 +269,68 @@ int32_t Ad7124::readRaw(uint8_t ch)
   return getData();
 }
 
-// Get a reading in raw counts from all enabled channels
-// Multiple channels should be enabled before calling
-int Ad7124::readRaw(int32_t *buf, uint8_t chCount)
+
+
+// Get a reading in raw counts from multiple enabled channels
+// Channels should be enabled before calling
+// Uses double (float) to store value. (for now) This is safe because we know
+// our value will only be 24 bits.
+int Ad7124::readRaw(Ad7124_Readings *buf, uint8_t chCount)
 {
   int ret;
-  //int ch;
-  int32_t data;
+  uint8_t firstChannel;
+  
+  //TODO: Check for appropriate buffer size
+  //Never mind, no easy way to check.
 
-  ret = setMode(AD7124_OpMode_SingleConv);
-
-  if (ret < 0)
-  {
-    return ret;
+  // Find first enabled channel (just in case it's not 0)
+  // This should be fast, it's just a bitwise compare.
+  for(int i = 0; i < AD7124_MAX_CHANNELS; i++){
+    if(enabled(i)){
+      firstChannel = i;
+      break;
+    }
   }
 
-  for (int i = 0; i < chCount; i++)
-  {
-
-    waitForConvReady(timeout);
+  // If we are in single conversion mode, we need to write the mode  
+  // register again to start the conversion. [added on 12-12-21]
+  if(mode() == AD7124_OpMode_SingleConv){
+    ret = setMode(AD7124_OpMode_SingleConv); 
     if (ret < 0)
     {
       return ret;
     }
+  }
 
-    data = getData();
 
-    //ch = currentChannel(); //This works now, but using as the buffer index wouldn't work if we skipped a channel number. WHAT TO DO?
+  for (int i = 0; i < chCount; i++)
+  {
+    
+    // In order to make sure we don't start filling the buffer from
+    // the middle of a sampling sequence, we will wait until the
+    // first array element corresponds to the first enabled channel.
+    // (This should only happen at high data rates in continuous mode)
+    do{
+      ret = waitForConvReady(timeout);
+      if (ret < 0){
+        return ret;
+      }    
 
-    buf[i] = data; // Keep using the loop index for now. I need to think about this some more. So far it has worked fine this way
-    //buf[ch] = data;
+      //buf[i].ch = currentChannel();
+      buf[i].value = (double)getData();
+      buf[i].ch = currentChannel();
+          
+      if(buf[i].ch == firstChannel){         
+        break;
+      }
+            
+      // if((i == 0) && (buf[i].ch != firstChannel)){ 
+      //   Serial.print("E");
+      // }
 
-    if (buf[i] < 0)
-    {
+    } while(i == 0);            
+
+    if (buf[i].value < 0){
       return AD7124_COMM_ERR;
     }
   }
@@ -316,38 +338,35 @@ int Ad7124::readRaw(int32_t *buf, uint8_t chCount)
   return 0;
 }
 
-// Get a reading in voltage from a single channel
+
+
+// Get a reading in voltage from a single channel.
 double Ad7124::readVolts(uint8_t ch)
-{
-
-  uint8_t idx = channelSetup(ch);
-
-  return toVolts(readRaw(ch), setup[idx].gain(), setup[idx].refV(), setup[idx].bipolar());
+{   
+  return toVolts(readRaw(ch),ch);
 }
 
+
+
 // Get readings for multiple sequential channels in volts
-int Ad7124::readVolts(double *buf, uint8_t chCount)
+int Ad7124::readVolts(Ad7124_Readings *buf, uint8_t chCount)
 {
   int ret;
-  int32_t data[8];
 
-  ret = readRaw(data, chCount);
+  ret = readRaw(buf, chCount);
   if (ret < 0)
   {
     return ret;
   }
 
   for (int i = 0; i < chCount; i++)
-  {
-
-    uint8_t idx = channelSetup(i);
-
-    // If the measurement is successful, the value is converted into voltage
-    buf[i] = toVolts(data[i], setup[idx].gain(), setup[idx].refV(), setup[idx].bipolar());
+  {    
+    buf[i].value = toVolts(buf[i].value, buf[i].ch);
   }
 
   return 0;
 }
+
 
 //Read K Type thermocouple. The channel must first be setup properly
 //for reading thermocouples.
@@ -356,12 +375,14 @@ double Ad7124::readTC(uint8_t ch, double refTemp, TcTypes type)
   return thermocouple.voltageToTempDegC(readVolts(ch), refTemp, type);
 }
 
+
 //Read a 4 wire full bridge sensor. Return value can be scaled with
 //optional scaleFactor arg. Returns mV/V if scale factor is one (default)
 double Ad7124::readFB(uint8_t ch, double vEx, double scaleFactor)
 {
   return ((readVolts(ch) * 1000.0) / vEx) * scaleFactor;
 }
+
 
 // Sets the ADC Control register
 int Ad7124::setAdcControl(AD7124_OperatingModes mode,
@@ -383,7 +404,7 @@ int Ad7124::setAdcControl(AD7124_OperatingModes mode,
 // for reading thermocouples. EXPERIMENTAL
 double Ad7124::readIcTemp(uint8_t ch)
 {
-  return tempSensorRawToDegC(readRaw(ch));
+  return scaleIcTemp(readRaw(ch));
 }
 
 // Control the mode of operation for ADC
@@ -394,6 +415,11 @@ int Ad7124::setMode(AD7124_OperatingModes mode)
   regs[Reg_Control].value |= AD7124_ADC_CTRL_REG_MODE(mode);
 
   return writeRegister(Reg_Control);
+}
+
+// Returns current operating mode
+AD7124_OperatingModes Ad7124::mode(){  
+  return static_cast<AD7124_OperatingModes>((regs[Reg_Control].value >> 2) & 0xF);
 }
 
 // Configure channel
@@ -425,7 +451,7 @@ int Ad7124::enableChannel(uint8_t ch, bool enable)
 
     ch += Reg_Channel_0;
 
-    ret = readRegister((AD7124_regIDs)ch);
+    ret = readRegister((AD7124_regIDs)ch); // Is this read necessary?
     if (ret < 0)
     {
       return ret;
@@ -437,7 +463,6 @@ int Ad7124::enableChannel(uint8_t ch, bool enable)
     }
     else
     {
-
       regs[ch].value &= ~AD7124_CH_MAP_REG_CH_ENABLE;
     }
 
@@ -446,10 +471,15 @@ int Ad7124::enableChannel(uint8_t ch, bool enable)
   return -1;
 }
 
+bool Ad7124::enabled(uint8_t ch){
+  ch += Reg_Channel_0;  
+  return (regs[ch].value & AD7124_CH_MAP_REG_CH_ENABLE) >> 15;  
+}
+
 // Returns the setup number used by the channel
 int Ad7124::channelSetup(uint8_t ch)
 {
-  if (ch < 16)
+  if (ch < AD7124_MAX_CHANNELS)
   {
     uint8_t setup;
 
@@ -472,36 +502,6 @@ int Ad7124::currentChannel()
   return regs[Reg_Status].value & 0x0F;
 }
 
-// Start a conversion on given channel
-int Ad7124::startSingleConversion(uint8_t ch)
-{
-
-  if (ch < 16)
-  {
-    int ret;
-
-    ret = enableChannel(ch, true);
-    if (ret < 0)
-    {
-      return ret;
-    }
-    return setMode(AD7124_OpMode_SingleConv);
-  }
-  return -1;
-}
-
-// This is the old getData() that works if we are NOT useing data + status mode
-// Returns positive raw ADC counts, or negative error code
-// int32_t Ad7124::getData(){
-//   int ret;
-
-//   ret = readRegister(Reg_Data);
-//   if (ret < 0) {
-//     return ret; //Error
-//   }
-
-//   return regs[Reg_Data].value; //Legit value
-// }
 
 // Returns positive raw ADC counts, or negative error code
 // This version assumes the data + status mode is enabled. As long as testing
@@ -512,11 +512,6 @@ int32_t Ad7124::getData()
 
   // Temporary reg struct for data with extra byte to hold status bits
   Ad7124_Register Reg_DataAndStatus{0x02, 0x0000, 4, 2};
-
-  // ret = waitForSpiReady (timeout); [commented out 8-26-21, may not be needed and looking for bottleneck in sample rate]
-  // if (ret < 0) {
-  //     return ret;
-  // }
 
   ret = noCheckReadRegister(&Reg_DataAndStatus);
   if (ret < 0)
@@ -530,12 +525,24 @@ int32_t Ad7124::getData()
   return regs[Reg_Data].value;
 }
 
+
 // Convert raw ADC data to volts
-double Ad7124::toVolts(long value, int gain, double vref, bool bipolar)
+double Ad7124::toVolts(double value, uint8_t ch)
 {
   double voltage = (double)value;
+  uint8_t idx = channelSetup(ch);
+  uint8_t chReg = ch + Reg_Channel_0; 
 
-  if (bipolar)
+  //Special case, if reading internal temp sensor just 
+  //return the original value unchanged so that the output
+  //can be easily be converted with formula from datasheet  
+  uint8_t ainP = (regs[chReg].value >> 5) & 0x1F;
+  uint8_t ainN =  regs[chReg].value & 0x1F;
+  if((ainP == AD7124_Input_TEMP) || (ainN == AD7124_Input_TEMP)){
+    return value;    
+  }
+    
+  if (setup[idx].bipolar())
   {
     voltage = voltage / (double)0x7FFFFFUL - 1;
   }
@@ -544,12 +551,22 @@ double Ad7124::toVolts(long value, int gain, double vref, bool bipolar)
     voltage = voltage / (double)0xFFFFFFUL;
   }
 
-  voltage = voltage * vref / (double)gain;
+  voltage = voltage * setup[idx].refV() / (double)setup[idx].gain();
   return voltage;
 }
 
+double Ad7124::scaleTC(double volts, double refTemp, TcTypes type)
+{
+  return thermocouple.voltageToTempDegC(volts, refTemp, type);
+}
+
+double Ad7124::scaleFB(double volts, double vEx, double scaleFactor)
+{
+  return ((volts * 1000.0) / vEx) * scaleFactor;
+}
+
 // Convert raw value from IC temperature sensor to degrees C
-double Ad7124::tempSensorRawToDegC(long value)
+double Ad7124::scaleIcTemp(double value)
 {
   //Conversion from datasheet https://www.analog.com/media/en/technical-documentation/data-sheets/AD7124-4.pdf
   return ((value - 0x800000) / 13548.00) - 272.5;
@@ -629,7 +646,7 @@ int Ad7124::noCheckWriteRegister(Ad7124_Register reg)
   //Check that we can write to the register
   if (reg.rw == AD7124_R)
   {
-    Serial.println(reg.rw);
+    //Serial.println(reg.rw);
     return AD7124_INVALID_VAL;
   }
 

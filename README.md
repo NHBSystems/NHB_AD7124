@@ -7,15 +7,16 @@ for up to 7 single ended channels). The library was originally written for use
 with the [NHB AD7124 Analog Sensor FeatherWing](https://www.tindie.com/products/24680/), 
 but there is no reason it couldn't be used with a raw chip in your own design.
 
-This library has only been tested with SAMD21 so far, but it really should work 
-with any architectures that have a working, Arduino style SPI implementation. 
+This library has been tested with SAMD21, ESP32, and Teensy 3.2 so far, but it 
+really should work with any architectures that have a working, Arduino style SPI
+implementation. 
 
 Most key features of the IC are implemented, though some things are not 
 thoroughly tested.
 
 ### Implemented and tested
-- Reading differential voltages
-- Reading single ended voltages
+- Reading differential voltages (single or continuous conversion mode)
+- Reading single ended voltages (single or continuous conversion mode)
 - Unipolar/bipolar operation
 - Configuring channels and physical pins 
 - Using 'setups' to assign different configurations (reference, gain, filtering) 
@@ -24,19 +25,15 @@ thoroughly tested.
   thermocouples
 - On chip low side switch. *(On NHB boards, this is tied to the enable pin of a 
   2.5V regulator to provide excitation voltage to bridge sensors.)*
-- Function to read and scale full bridge sensors in one call
-- Function to read thermocouples in one call (Type K only for now)
-- Function to read internal temperature sensor in one call
 - Probably a bunch of other stuff I am not thinking of right now
 
-### Partially implemented / not fully tested
-- Modes other than single conversion (i.e. continuos, shutdown, calibration)
-
-### Not implemented yet
+### Not implemented or not tested (yet)
 - CRC checks on SPI communication
-- Excitation current output (I hope to do this very soon)
+- Shutdown, idle, and calibration modes
+- Excitation current output
+- Advanced error checking features
 - Built in support for thermocouple types other than Type K
-- Digital outputs on AIN2 and AIN3
+
 
 
 Basic API  
@@ -280,7 +277,7 @@ int setPWRSW(bool enabled);
 
 <br/><br/>  
 
-Example
+Basic Example
 -----------
 ```cpp
 #include "NHB_AD7124.h"
