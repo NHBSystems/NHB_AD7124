@@ -44,10 +44,7 @@ int Ad7124Setup::setConfig(AD7124_RefSources ref, AD7124_GainSel gain,
   setupValues.bipolar = bipolar;
   setupValues.burnout;
 
-  if (ref < AD7124_Ref_Internal)
-  {
-    setupValues.refV = exRefV;
-  }
+  setupValues.refV = exRefV;
 
   //Offset to config reg group
   uint8_t reg = setupNum + Reg_Config_0;
