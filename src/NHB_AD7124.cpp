@@ -147,13 +147,18 @@ Ad7124::Ad7124(uint8_t csPin, uint32_t spiFrequency)
   }
 }
 
+
+
 // Standard Arduino style begin(). Initializes SPI and resets the AD7124-4 IC
-int Ad7124::begin()
+int Ad7124::begin(SPIClass &spi_bus)
 {
   int ret;
 
-  pinMode(cs, OUTPUT);
-  SPI.begin();
+  pinMode(cs, OUTPUT); 
+  digitalWrite(cs, HIGH);
+
+  spi = &spi_bus; 
+  spi->begin();
 
   return reset(); 
 }
@@ -836,9 +841,9 @@ uint8_t Ad7124::computeCRC8(uint8_t *buffer, uint8_t size)
 // The received data is stored in the buffer in-place (the old data is replaced with the data received).
 void Ad7124::spiWriteAndRead(uint8_t *data, uint8_t numBytes)
 {
-  SPI.beginTransaction(spiSettings);
+  spi->beginTransaction(spiSettings);
   digitalWrite(cs, LOW);
-  SPI.transfer(data, numBytes);
+  spi->transfer(data, numBytes);
   digitalWrite(cs, HIGH);
-  SPI.endTransaction();
+  spi->endTransaction();
 }

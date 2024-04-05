@@ -323,9 +323,10 @@ class Ad7124
 {
 
 public:
-    Ad7124(uint8_t csPin, uint32_t spiFrequency);
+    Ad7124(uint8_t csPin, uint32_t spiFrequency);    
 
-    int begin();
+    //int begin();
+    int begin(SPIClass &spi = SPI);
 
     //Resets the Ad7124 by sending 64 consecutive 1s
     int reset();
@@ -425,15 +426,15 @@ public:
 
 
         
-    //Waits until a new conversion result is available.
-    //This would be private, but I made it public in case someone wants
-    //to implement there own synchronized continuouse mode function
-    int waitEndOfConversion(uint32_t timeout_ms);
+    // Waits until a new conversion result is available.
+    // This would be private, but I made it public in case someone wants
+    // to implement there own synchronized continuous mode function
+    //int waitForConvReady(uint32_t timeout);
 
     //Returns the most recent sample in raw ADC counts with
     //status bits appended (data + status mode)
     //This would be private, but I made it public in case someone wants
-    //to implement there own synchronized continuouse mode function
+    //to implement there own synchronized continuous mode function
     int32_t getData();
 
 
@@ -465,6 +466,7 @@ private:
     bool isReady = true; //Not really used now, may go away [8-26-21]
     uint8_t cs;
     uint32_t timeout = AD7124_DEFAULT_TIMEOUT_MS;
+    SPIClass *spi;
 
     friend class Ad7124Setup;
     
