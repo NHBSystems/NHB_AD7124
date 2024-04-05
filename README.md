@@ -25,11 +25,12 @@ thoroughly tested.
   thermocouples
 - On chip low side switch. *(On NHB boards, this is tied to the enable pin of a 
   2.5V regulator to provide excitation voltage to bridge sensors.)*
-- Probably a bunch of other stuff I am not thinking of right now
+- Probably a bunch of other stuff I am not thinking of right now  
+- Shutdown and Idle modes for deep sleep power savings
 
 ### Not implemented or not tested (yet)
 - CRC checks on SPI communication
-- Shutdown, idle, and calibration modes
+- ~~Shutdown~~, ~~idle~~, and calibration modes
 - Excitation current output
 - Advanced error checking features
 - Built in support for thermocouple types other than Type K
@@ -52,10 +53,11 @@ Ad7124(uint8_t csPin, uint32_t spiFrequency);
 
 
 You will also need to cal the standard Arduino style begin method in your 
-setup() function to initialize the Ad7124 chip. It takes no arguments.  
+setup() function to initialize the Ad7124 chip. It takes an optional argument
+of an SPI object to allow use of an alternate SPI bus
 
 ```c
-begin();
+begin(SPIClass &spi = SPI);
 ```
 
 
