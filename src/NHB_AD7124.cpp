@@ -42,7 +42,6 @@ int Ad7124Setup::setConfig(AD7124_RefSources ref, AD7124_GainSel gain,
   setupValues.ref = ref;
   setupValues.gain = gain;
   setupValues.bipolar = bipolar;
-  setupValues.burnout;
 
   setupValues.refV = exRefV;
 
@@ -152,8 +151,6 @@ Ad7124::Ad7124(uint8_t csPin, uint32_t spiFrequency)
 // Standard Arduino style begin(). Initializes SPI and resets the AD7124-4 IC
 int Ad7124::begin(SPIClass &spi_bus)
 {
-  int ret;
-
   pinMode(cs, OUTPUT); 
   digitalWrite(cs, HIGH);
 
@@ -166,8 +163,6 @@ int Ad7124::begin(SPIClass &spi_bus)
 // Reset the AD7124 IC to power on defaults
 int Ad7124::reset(void)
 {
-  int ret = 0;
-
   // Write 64 1's to reset the chip
   uint8_t wrBuf[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
@@ -280,7 +275,7 @@ int Ad7124::readRaw(uint8_t ch)
 int Ad7124::readRaw(Ad7124_Readings *buf, uint8_t chCount)
 {
   int ret;
-  uint8_t firstChannel;
+  uint8_t firstChannel = 0;
   
   //TODO: Check for appropriate buffer size
   //Never mind, no easy way to check.
@@ -640,7 +635,6 @@ int Ad7124::noCheckReadRegister(Ad7124_Register *reg)
 // Writes the value of the specified register without checking if ready
 int Ad7124::noCheckWriteRegister(Ad7124_Register reg)
 {
-  int ret = 0;
   int32_t regValue = 0;
   uint8_t wrBuf[8] = {0, 0, 0, 0, 0, 0, 0, 0};
   uint8_t crc8 = 0;
@@ -815,7 +809,7 @@ int Ad7124::waitForConvReady(uint32_t timeout)
 // NOT USED YET
 uint8_t Ad7124::computeCRC8(uint8_t *buffer, uint8_t size)
 {
-  uint8_t crc;
+  uint8_t crc = 0;
 
   while (size)
   {
