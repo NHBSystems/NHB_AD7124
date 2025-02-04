@@ -390,7 +390,6 @@ int Ad7124::setExCurrent(AD7124_ExCurrentOutputChannel ch, AD7124_ExCurrentSourc
     regs[Reg_IOCon1].value &= ~ (AD7124_IO_CTRL1_REG_IOUT1 (7) | AD7124_IO_CTRL1_REG_IOUT_CH1 (15));
     regs[Reg_IOCon1].value |= AD7124_IO_CTRL1_REG_IOUT1 (current) | AD7124_IO_CTRL1_REG_IOUT_CH1 (ch);
   }
-  Serial.println(regs[Reg_IOCon1].value, HEX);
   return writeRegister (Reg_IOCon1);
 }
 
