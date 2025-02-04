@@ -156,9 +156,8 @@ enum AD7124_BurnoutCurrents
     AD7124_Burnout_4uA      // burnout current source on, 4 μA.
 };
 
-// Excitation currents - Not used yet.
-// TODO: Look up actual value in datasheet (IO_CONTROL_1 Register)
-enum AD7124_ExCurrents
+// Excitation currents (page 84 of datasheet)
+enum AD7124_ExCurrent
 {
     AD7124_ExCurrent_Off = 0x00,
     AD7124_ExCurrent_50uA,
@@ -166,7 +165,28 @@ enum AD7124_ExCurrents
     AD7124_ExCurrent_250uA,
     AD7124_ExCurrent_500uA,
     AD7124_ExCurrent_750uA,
-    AD7124_ExCurrent_1mA
+    AD7124_ExCurrent_1000uA,
+    AD7124_ExCurrent_0_1uA
+};
+
+//excitation source channels
+enum AD7124_ExCurrentSource
+{
+    AD7124_ExCurrentSource_0 = 0x00,
+    AD7124_ExCurrentSource_1 = 0x01
+};
+
+//excitation output channels (page 84 of datasheet)
+enum AD7124_ExCurrentOutputChannel
+{
+    AD7124_ExCurrentOutputChannel_AIN0 = 0x0,
+    AD7124_ExCurrentOutputChannel_AIN1 = 0x1,
+    AD7124_ExCurrentOutputChannel_AIN2 = 0x4,
+    AD7124_ExCurrentOutputChannel_AIN3 = 0x5,
+    AD7124_ExCurrentOutputChannel_AIN4 = 0xA,
+    AD7124_ExCurrentOutputChannel_AIN5 = 0xB,
+    AD7124_ExCurrentOutputChannel_AIN6 = 0xE,
+    AD7124_ExCurrentOutputChannel_AIN7 = 0xF,
 };
 
 // Device register info
@@ -330,9 +350,6 @@ public:
 
     //Resets the Ad7124 by sending 64 consecutive 1s
     int reset();
-    
-
-
 
     //Read a single channel in single conversion mode and
     //return the value in raw ADC counts
@@ -375,9 +392,6 @@ public:
 
     //Converts a raw reading from the on chip temp sensor to degrees C
     double scaleIcTemp(double value);  
-
-
-
    
     //Enable or disable the onboard PWR_SW FET
     int setPWRSW(bool enabled);
@@ -386,7 +400,7 @@ public:
     int setVBias(AD7124_VBiasPins vBiasPin, bool enabled);
 
     //Set excitation current
-    //int setExCurrent(uint8_t ch, AD7124_ExCurrents); //NOT IMPLEMENTED YET
+    int setExCurrent(AD7124_ExCurrentOutputChannel ch, AD7124_ExCurrentSource source, AD7124_ExCurrent current);
 
     void setTimeout(uint32_t ms) { timeout = ms; }
 
