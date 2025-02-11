@@ -31,6 +31,7 @@
 #include <SPI.h>
 #include "AD_Defs.h"
 #include "Thermocouple.h"
+#include "RTD.h"
 
 #define AD7124_DEFAULT_TIMEOUT_MS 200 // milliseconds
 #define AD7124_MAX_CHANNELS 16 // not sure if this will be used yet
@@ -476,6 +477,7 @@ private:
 
     SPISettings spiSettings;
     Thermocouple thermocouple;
+    RTD rtd;
     bool crcEnabled = false;
     bool isReady = true; //Not really used now, may go away [8-26-21]
     uint8_t cs;
