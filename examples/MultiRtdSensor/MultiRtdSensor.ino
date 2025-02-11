@@ -54,7 +54,9 @@ Ad7124 adc(csPin, 4000000);
 // than calculated using the formula in the datasheet. This is because of
 // the settling time plus the time it takes to enable or change the channel.
 uint16_t filterSelectBits = 320;
-const long FullScale = 1L << 24;
+const long fullScale = 1L << 24;
+const double gain = 4;
+const double rRef = 5110;
 
 void setup() {
 
@@ -87,7 +89,7 @@ bool burnoutDetect(uint8_t probe){
   delay(5); //wait for burnout current to stabilize
   double rawAdc = adc.readRaw(probe);
   adc.setup[probe].setConfig(AD7124_Ref_ExtRef1, AD7124_Gain_4, true, AD7124_Burnout_Off); //return back to normal settings
-  if(rawAdc >= (FullScale-10)){
+  if(rawAdc >= (fullScale-10)){
     return true;
   } else {
     return false;
@@ -124,8 +126,8 @@ void readProbe(uint8_t probe){
     //disable setup
     adc.enableChannel(probe, false);
 
-    double resistance = adc.rtd.toResistance(rawAdc1, 4, 5110) * 2; //multiply by 2 because we are using a 2 excitation sources (current is double)
-    double temp = adc.rtd.toTemperature(resistance); //get temperature from resistance,
+    double resistance = adc.rtd.adcRawToResistance(rawAdc1, gain, rRef) * 2; //multiply by 2 because we are using a 2 excitation sources (current is double)
+    double temp = adc.rtd.resistanceToTemperature(resistance); //get temperature from resistance,
     
     Serial.print(resistance, 2);
     Serial.print(',');

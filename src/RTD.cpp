@@ -31,11 +31,11 @@
 
 
 float RTD::adcRawToResistance(float adc, float gain, float rRef){
-    return ((adc-zero) * rRef) / (fullScale * gain - adc);
+    return ((adc-zero) * rRef) / (zero * gain);
 }
 
 
-float RTD::resistanceToTemperature(float resistance, RtdTypes type = AUTO_DETECT){
+float RTD::resistanceToTemperature(float resistance, RtdTypes type){
 
     float resPerDegree = 0;
     float resistanceAtZero = 0;
@@ -52,7 +52,7 @@ float RTD::resistanceToTemperature(float resistance, RtdTypes type = AUTO_DETECT
     case AUTO_DETECT:
     default:
         //if resistance is > 400 ohms it's a PT1000 (PT100 @ 390.26 = 850°C)
-        resPerDegree = resistance > 400 ? 0.385 : 3.85; 
+        resPerDegree = resistance > 400 ? 3.85 : 0.385; 
         resistanceAtZero = resistance > 400 ? 1000 : 100;
         break;
     }
