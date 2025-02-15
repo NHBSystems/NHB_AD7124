@@ -32,6 +32,8 @@ currentChannel	KEYWORD2
 status	KEYWORD2
 toVolts	KEYWORD2
 tempSensorRawToDegC	KEYWORD2
+adcRawToResistance	KEYWORD2
+resistanceToTemperature	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)

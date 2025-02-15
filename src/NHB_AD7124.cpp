@@ -380,6 +380,18 @@ double Ad7124::readFB(uint8_t ch, double vEx, double scaleFactor)
   return ((readVolts(ch) * 1000.0) / vEx) * scaleFactor;
 }
 
+//sets the excitation current for a given channel
+int Ad7124::setExCurrent(AD7124_ExCurrentOutputChannel ch, AD7124_ExCurrentSource source, AD7124_ExCurrent current){
+  if (source == AD7124_ExCurrentSource_0) {
+    regs[Reg_IOCon1].value &= ~ (AD7124_IO_CTRL1_REG_IOUT0 (7) | AD7124_IO_CTRL1_REG_IOUT_CH0 (15));
+    regs[Reg_IOCon1].value |= AD7124_IO_CTRL1_REG_IOUT0 (current) | AD7124_IO_CTRL1_REG_IOUT_CH0 (ch);
+  }
+  else {
+    regs[Reg_IOCon1].value &= ~ (AD7124_IO_CTRL1_REG_IOUT1 (7) | AD7124_IO_CTRL1_REG_IOUT_CH1 (15));
+    regs[Reg_IOCon1].value |= AD7124_IO_CTRL1_REG_IOUT1 (current) | AD7124_IO_CTRL1_REG_IOUT_CH1 (ch);
+  }
+  return writeRegister (Reg_IOCon1);
+}
 
 // Sets the ADC Control register
 int Ad7124::setAdcControl(AD7124_OperatingModes mode,
